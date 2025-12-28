@@ -1,188 +1,185 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { useNavigate } from 'react-router-dom';
-import { User, Lock, Phone, UserCircle } from 'lucide-react';
+import { LogIn, UserPlus, ArrowLeft } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [isRegister, setIsRegister] = useState(false); // Mode Login atau Daftar
   const [loading, setLoading] = useState(false);
-  
+  const [isRegister, setIsRegister] = useState(false); // Mode: false = Login, true = Daftar
+
   // State Form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nama, setNama] = useState('');
-  const [wa, setWa] = useState('');
+  const [noWa, setNoWa] = useState('');
   const [role, setRole] = useState('pembeli'); // Default role
 
-  // Fungsi Login
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      alert('Login Gagal: ' + error.message);
-    } else {
-      navigate('/'); // Sukses langsung ke Home
-    }
-    setLoading(false);
-  };
-
-  // Fungsi Daftar (Register)
-  const handleRegister = async (e) => {
+  async function handleAuth(e) {
     e.preventDefault();
     setLoading(true);
 
-    // 1. Daftar Akun Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      if (isRegister) {
+        // --- LOGIC DAFTAR ---
+        
+        // 1. Buat Akun di Auth Supabase
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+        });
 
-    if (authError) {
-      alert('Gagal Daftar: ' + authError.message);
-      setLoading(false);
-      return;
-    }
+        if (signUpError) throw signUpError;
 
-    // 2. Simpan Detail ke Tabel Profiles
-    if (authData.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            id: authData.user.id, // ID ini harus sama dengan Auth ID
-            email: email,
-            nama_lengkap: nama,
-            nomor_wa: wa,
-            role: role
+        // 2. Simpan Biodata ke Tabel 'profiles'
+        if (data.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                id: data.user.id,
+                email: email,
+                nama_lengkap: nama,
+                nomor_wa: noWa,
+                role: role // 'pembeli', 'penjual', atau 'kurir'
+              }
+            ]);
+
+          if (profileError) {
+            // Jika gagal simpan profil, warning tapi jangan error fatal (bisa diedit nanti)
+            console.error("Gagal simpan profil:", profileError);
+            alert("Akun jadi tapi gagal simpan profil. Hubungi Admin.");
+          } else {
+            alert("Pendaftaran Berhasil! Silakan Login.");
+            setIsRegister(false); // Kembali ke mode login
           }
-        ]);
+        }
 
-      if (profileError) {
-        alert('Akun jadi tapi gagal simpan profil: ' + profileError.message);
       } else {
-        alert('Pendaftaran Berhasil! Silakan Login.');
-        setIsRegister(false); // Pindah ke tampilan login
+        // --- LOGIC LOGIN ---
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
+        });
+
+        if (error) throw error;
+        
+        // Jika sukses, arahkan ke Dashboard (atau Home)
+        navigate('/dashboard');
       }
+
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border-t-4 border-genpro-maroon">
+      <div className="bg-white max-w-md w-full rounded-2xl shadow-xl overflow-hidden">
         
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-genpro-maroon">
+        {/* Header Warna */}
+        <div className="bg-genpro-maroon p-6 text-center text-white relative">
+          <Link to="/" className="absolute left-4 top-6 text-white/80 hover:text-white">
+            <ArrowLeft size={24} />
+          </Link>
+          <h2 className="text-2xl font-bold mb-1">
             {isRegister ? 'Gabung Genpro' : 'Selamat Datang'}
           </h2>
-          <p className="text-gray-500 text-sm mt-1">
-            {isRegister ? 'Isi data diri untuk mulai berniaga' : 'Masuk untuk mengelola lapak Anda'}
-          </p>
+          <p className="text-sm text-orange-200">Marketplace Komunitas Kita</p>
         </div>
 
         {/* Form */}
-        <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4">
-          
-          {/* Input Nama & WA (Hanya muncul saat Daftar) */}
-          {isRegister && (
-            <>
-              <div className="relative">
-                <UserCircle className="absolute left-3 top-3 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Nama Lengkap"
-                  className="w-full pl-10 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-genpro-orange"
-                  value={nama} onChange={e => setNama(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="relative">
-                <Phone className="absolute left-3 top-3 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Nomor WA (08xxx)"
-                  className="w-full pl-10 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-genpro-orange"
-                  value={wa} onChange={e => setWa(e.target.value)}
-                  required
-                />
-              </div>
-              
-              {/* Pilihan Role */}
-              <div className="p-3 border rounded-lg bg-gray-50">
-                <label className="block text-sm text-gray-600 mb-2">Saya mendaftar sebagai:</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="radio" name="role" value="pembeli" 
-                      checked={role === 'pembeli'} 
-                      onChange={() => setRole('pembeli')}
-                      className="accent-genpro-maroon"
-                    /> Pembeli
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="radio" name="role" value="penjual" 
-                      checked={role === 'penjual'} 
-                      onChange={() => setRole('penjual')}
-                      className="accent-genpro-maroon"
-                    /> Penjual
-                  </label>
+        <div className="p-8">
+          <form onSubmit={handleAuth} className="space-y-4">
+            
+            {/* Field Khusus Register */}
+            {isRegister && (
+              <>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Nama Lengkap</label>
+                  <input 
+                    required type="text" 
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-genpro-orange outline-none"
+                    value={nama} onChange={e => setNama(e.target.value)}
+                    placeholder="Contoh: Budi Santoso"
+                  />
                 </div>
-              </div>
-            </>
-          )}
 
-          {/* Email & Password (Selalu Muncul) */}
-          <div className="relative">
-            <User className="absolute left-3 top-3 text-gray-400" size={20} />
-            <input
-              type="email"
-              placeholder="Email"
-              className="w-full pl-10 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-genpro-orange"
-              value={email} onChange={e => setEmail(e.target.value)}
-              required
-            />
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Nomor WhatsApp</label>
+                  <input 
+                    required type="text" 
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-genpro-orange outline-none"
+                    value={noWa} onChange={e => setNoWa(e.target.value)}
+                    placeholder="08123456789"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Daftar Sebagai</label>
+                  <select 
+                    value={role} 
+                    onChange={(e) => setRole(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-genpro-orange focus:border-transparent transition bg-white"
+                  >
+                    <option value="pembeli">Pembeli (Ingin Jajan)</option>
+                    <option value="penjual">Penjual (Ingin Dagang)</option>
+                    {/* Opsi Kurir Ditambahkan Di Sini */}
+                    <option value="kurir">Kurir (Jasa Antar)</option>
+                  </select>
+                </div>
+              </>
+            )}
+
+            {/* Field Login & Register (Umum) */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Email</label>
+              <input 
+                required type="email" 
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-genpro-orange outline-none"
+                value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="nama@email.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Password</label>
+              <input 
+                required type="password" 
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-genpro-orange outline-none"
+                value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="********"
+              />
+            </div>
+
+            {/* Tombol Submit */}
+            <button 
+              disabled={loading}
+              type="submit" 
+              className="w-full bg-genpro-orange text-genpro-maroon font-bold py-3 rounded-lg hover:bg-yellow-400 transition flex justify-center items-center gap-2 mt-6"
+            >
+              {loading ? 'Memproses...' : (
+                isRegister ? <><UserPlus size={20}/> Daftar Sekarang</> : <><LogIn size={20}/> Masuk Aplikasi</>
+              )}
+            </button>
+          </form>
+
+          {/* Toggle Login/Register */}
+          <div className="mt-6 text-center border-t pt-4">
+            <p className="text-gray-600 text-sm">
+              {isRegister ? 'Sudah punya akun?' : 'Belum punya akun?'}
+            </p>
+            <button 
+              onClick={() => setIsRegister(!isRegister)}
+              className="text-genpro-maroon font-bold hover:underline mt-1"
+            >
+              {isRegister ? 'Login di sini' : 'Daftar akun baru'}
+            </button>
           </div>
 
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-            <input
-              type="password"
-              placeholder="Password"
-              className="w-full pl-10 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-genpro-orange"
-              value={password} onChange={e => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* Tombol Submit */}
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full bg-genpro-maroon text-white py-3 rounded-lg font-bold hover:bg-red-900 transition flex justify-center"
-          >
-            {loading ? 'Memproses...' : (isRegister ? 'Daftar Sekarang' : 'Masuk')}
-          </button>
-        </form>
-
-        {/* Toggle Login/Register */}
-        <p className="text-center mt-6 text-sm text-gray-600">
-          {isRegister ? 'Sudah punya akun? ' : 'Belum punya akun? '}
-          <button 
-            onClick={() => setIsRegister(!isRegister)}
-            className="text-genpro-orange font-bold hover:underline"
-          >
-            {isRegister ? 'Login di sini' : 'Daftar di sini'}
-          </button>
-        </p>
+        </div>
       </div>
     </div>
   );
