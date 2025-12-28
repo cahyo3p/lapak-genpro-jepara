@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
-import { Package, Plus, Trash2, LogOut, ShoppingBag, Settings, Save, Home, ArrowLeft } from 'lucide-react';
+import { Package, Plus, Trash2, LogOut, ShoppingBag, Settings, Save, ArrowLeft } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -126,12 +126,15 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       
-      {/* HEADER BARU: Ada Tombol Kembali ke Halaman Depan */}
+      {/* HEADER DENGAN TOMBOL KEMBALI */}
       <div className="bg-genpro-maroon text-white p-6 shadow-md sticky top-0 z-30">
         
-        {/* Tombol Navigasi Atas */}
-        <div className="max-w-5xl mx-auto mb-4">
-          <button onClick={() => navigate('/')} className="text-white/80 hover:text-white flex items-center gap-2 text-sm font-bold transition">
+        {/* Tombol Navigasi Atas (INI YANG BARU) */}
+        <div className="max-w-5xl mx-auto mb-4 border-b border-white/20 pb-2">
+          <button 
+            onClick={() => navigate('/')} 
+            className="text-white/80 hover:text-white flex items-center gap-2 text-sm font-bold transition hover:bg-white/10 px-3 py-1 rounded-full w-fit"
+          >
             <ArrowLeft size={16} /> Kembali ke Halaman Belanja
           </button>
         </div>
@@ -171,6 +174,7 @@ export default function Dashboard() {
         {/* === TAB 1: PRODUK === */}
         {activeTab === 'produk' && (
           <div className="grid md:grid-cols-3 gap-6">
+            {/* Form Input */}
             <div className="md:col-span-1">
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <h2 className="font-bold text-gray-800 mb-4 pb-2 border-b">Tambah Produk</h2>
@@ -203,7 +207,7 @@ export default function Dashboard() {
                 </form>
               </div>
             </div>
-            
+            {/* List Produk */}
             <div className="md:col-span-2 space-y-3">
               {myProducts.length === 0 ? (
                 <div className="text-center py-10 bg-white rounded-lg border border-dashed text-gray-400">Belum ada produk.</div>
