@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
-import { Package, Plus, Trash2, LogOut, ShoppingBag, Settings, Save, CheckCircle, XCircle } from 'lucide-react';
+import { Package, Plus, Trash2, LogOut, ShoppingBag, Settings, Save, Home, ArrowLeft } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -80,8 +80,7 @@ export default function Dashboard() {
 
   // --- 2. LOGIC ORDER ---
   async function fetchIncomingOrders(userId) {
-    // Ambil order dimana saya adalah penjualnya
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('orders')
       .select('*, profiles:pembeli_id(nama_lengkap, nomor_wa)')
       .eq('penjual_id', userId)
@@ -92,20 +91,16 @@ export default function Dashboard() {
 
   async function updateStatusOrder(orderId, newStatus) {
     if(!confirm(`Ubah status jadi ${newStatus}?`)) return;
-    
     const { error } = await supabase
       .from('orders')
       .update({ status: newStatus })
       .eq('id', orderId);
 
-    if (!error) {
-      fetchIncomingOrders(user.id); // Refresh data
-    } else {
-      alert('Gagal update status');
-    }
+    if (!error) fetchIncomingOrders(user.id); 
+    else alert('Gagal update status');
   }
 
-  // --- 3. LOGIC PROFILE (BANK) ---
+  // --- 3. LOGIC PROFILE ---
   async function fetchProfile(userId) {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
     if (data) {
@@ -121,11 +116,7 @@ export default function Dashboard() {
   async function handleUpdateProfile(e) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update(profile)
-      .eq('id', user.id);
-
+    const { error } = await supabase.from('profiles').update(profile).eq('id', user.id);
     if (!error) alert("Profil Toko & Rekening Berhasil Disimpan!");
     else alert("Gagal simpan: " + error.message);
     setLoading(false);
@@ -134,8 +125,17 @@ export default function Dashboard() {
   // --- RENDER UI ---
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
+      
+      {/* HEADER BARU: Ada Tombol Kembali ke Halaman Depan */}
       <div className="bg-genpro-maroon text-white p-6 shadow-md sticky top-0 z-30">
+        
+        {/* Tombol Navigasi Atas */}
+        <div className="max-w-5xl mx-auto mb-4">
+          <button onClick={() => navigate('/')} className="text-white/80 hover:text-white flex items-center gap-2 text-sm font-bold transition">
+            <ArrowLeft size={16} /> Kembali ke Halaman Belanja
+          </button>
+        </div>
+
         <div className="max-w-5xl mx-auto flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -157,20 +157,20 @@ export default function Dashboard() {
           </button>
           <button onClick={() => setActiveTab('orders')} className={`flex-1 py-3 px-4 rounded-md font-bold flex justify-center items-center gap-2 transition ${activeTab === 'orders' ? 'bg-genpro-orange text-genpro-maroon shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>
             <ShoppingBag size={18}/> Pesanan Masuk 
-            {incomingOrders.some(o => o.status === 'menunggu_bayar') && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
+            {incomingOrders.some(o => o.status === 'menunggu_bayar') && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse ml-2"></span>}
           </button>
           <button onClick={() => setActiveTab('settings')} className={`flex-1 py-3 px-4 rounded-md font-bold flex justify-center items-center gap-2 transition ${activeTab === 'settings' ? 'bg-genpro-orange text-genpro-maroon shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>
-            <Settings size={18}/> Pengaturan Toko
+            <Settings size={18}/> Toko & Bank
           </button>
         </div>
       </div>
 
+      {/* KONTEN UTAMA */}
       <div className="max-w-5xl mx-auto p-4 mt-2">
         
         {/* === TAB 1: PRODUK === */}
         {activeTab === 'produk' && (
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Form Input */}
             <div className="md:col-span-1">
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <h2 className="font-bold text-gray-800 mb-4 pb-2 border-b">Tambah Produk</h2>
@@ -203,7 +203,7 @@ export default function Dashboard() {
                 </form>
               </div>
             </div>
-            {/* List Produk */}
+            
             <div className="md:col-span-2 space-y-3">
               {myProducts.length === 0 ? (
                 <div className="text-center py-10 bg-white rounded-lg border border-dashed text-gray-400">Belum ada produk.</div>
@@ -242,7 +242,6 @@ export default function Dashboard() {
                   </span>
                 </div>
 
-                {/* Detail Barang JSON */}
                 <div className="bg-gray-50 p-3 rounded-lg mb-4 text-sm">
                   {order.items_json.map((item, idx) => (
                     <div key={idx} className="flex justify-between border-b last:border-0 border-gray-200 py-1">
@@ -256,20 +255,15 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Tombol Aksi */}
                 <div className="flex gap-2 justify-end">
                   {order.status === 'menunggu_bayar' && (
-                    <button onClick={() => updateStatusOrder(order.id, 'diproses')} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700">
-                      Terima & Proses
-                    </button>
+                    <button onClick={() => updateStatusOrder(order.id, 'diproses')} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700">Terima Pesanan</button>
                   )}
                   {order.status === 'diproses' && (
-                    <button onClick={() => updateStatusOrder(order.id, 'dikirim')} className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-600">
-                      Barang Dikirim
-                    </button>
+                    <button onClick={() => updateStatusOrder(order.id, 'dikirim')} className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-600">Barang Dikirim</button>
                   )}
                   {order.status === 'dikirim' && (
-                    <div className="text-sm text-gray-500 italic">Menunggu pembeli konfirmasi terima...</div>
+                    <div className="text-sm text-gray-500 italic">Menunggu konfirmasi pembeli...</div>
                   )}
                 </div>
               </div>
@@ -282,7 +276,7 @@ export default function Dashboard() {
           <div className="max-w-2xl mx-auto">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
               <h2 className="font-bold text-gray-800 mb-6 flex items-center gap-2 text-xl">
-                <Settings className="text-genpro-orange"/> Pengaturan Toko & Rekening
+                <Settings className="text-genpro-orange"/> Pengaturan Toko & Bank
               </h2>
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
@@ -297,11 +291,8 @@ export default function Dashboard() {
                       value={profile.nomor_wa} onChange={e => setProfile({...profile, nomor_wa: e.target.value})} />
                   </div>
                 </div>
-
                 <div className="border-t border-gray-200 my-4 pt-4">
-                  <p className="text-genpro-maroon text-sm font-bold mb-3 bg-red-50 p-2 rounded inline-block">
-                    Rekening Penerimaan Uang (Wajib Diisi)
-                  </p>
+                  <p className="text-genpro-maroon text-sm font-bold mb-3 bg-red-50 p-2 rounded inline-block">Rekening Penerimaan Uang</p>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-bold text-gray-600 mb-1 block">Nama Bank / E-Wallet</label>
@@ -315,7 +306,6 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
-
                 <button disabled={loading} type="submit" className="w-full bg-genpro-maroon text-white font-bold py-3 rounded-lg hover:bg-red-900 transition flex justify-center items-center gap-2 shadow-lg">
                   {loading ? 'Menyimpan...' : <><Save size={18}/> Simpan Perubahan</>}
                 </button>
