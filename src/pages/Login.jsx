@@ -46,7 +46,6 @@ export default function Login() {
             ]);
 
           if (profileError) {
-            // Jika gagal simpan profil, warning tapi jangan error fatal (bisa diedit nanti)
             console.error("Gagal simpan profil:", profileError);
             alert("Akun jadi tapi gagal simpan profil. Hubungi Admin.");
           } else {
@@ -56,16 +55,29 @@ export default function Login() {
         }
 
       } else {
-        // --- LOGIC LOGIN ---
-        const { error } = await supabase.auth.signInWithPassword({
+        // --- LOGIC LOGIN (YANG DIPERBARUI) ---
+        const { data: { user }, error } = await supabase.auth.signInWithPassword({
           email: email,
           password: password,
         });
 
         if (error) throw error;
         
-        // Jika sukses, arahkan ke Dashboard (atau Home)
-        navigate('/dashboard');
+        // CEK ROLE DULU SEBELUM MENGARAHKAN HALAMAN
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        // Arahkan sesuai Role
+        if (profile?.role === 'admin') {
+          navigate('/admin');
+        } else if (profile?.role === 'kurir') {
+          navigate('/courier');
+        } else {
+          navigate('/dashboard'); // Penjual & Pembeli masuk sini dulu
+        }
       }
 
     } catch (error) {
@@ -126,7 +138,6 @@ export default function Login() {
                   >
                     <option value="pembeli">Pembeli (Ingin Jajan)</option>
                     <option value="penjual">Penjual (Ingin Dagang)</option>
-                    {/* Opsi Kurir Ditambahkan Di Sini */}
                     <option value="kurir">Kurir (Jasa Antar)</option>
                   </select>
                 </div>

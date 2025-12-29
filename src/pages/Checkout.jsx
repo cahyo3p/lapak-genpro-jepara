@@ -48,8 +48,9 @@ export default function Checkout() {
             id: product.id,
             nama_produk: product.nama_produk,
             harga: product.harga,
-            qty: qty
-        }],
+            qty: qty,
+			foto_url: product.foto_url
+		}],
         total_harga: totalHarga,
         fee_organisasi: feeOrganisasi,
         status: 'menunggu_bayar'
